@@ -17,7 +17,7 @@
                 <div class="alert alert-danger font-semibold">@TempData["Hata"]</div>
             }
 
-            <form asp-controller="Security" asp-action="KayitOl" method="post">
+            <form action="/security/kayitol" method="post" id="kayitFormu">
                 <!-- Üyelik Tipi Seçimi -->
                 <div class="mb-4">
                     <label class="form-label fw-bold d-block">Hesap Türünü Seçiniz</label>
@@ -33,7 +33,7 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-semibold" id="lblAd">Ad</label>
-                        <input type="text" name="Ad" class="form-control" required placeholder="Adınız" />
+                        <input type="text" name="Ad" id="txtAd" class="form-control" required placeholder="Adınız" />
                     </div>
                     <div class="col-md-6 mb-3" id="divSoyad">
                         <label class="form-label fw-semibold">Soyad</label>
@@ -79,19 +79,13 @@
         var isSatici = document.getElementById('rolSatici').checked;
         var firmaAlanlari = document.getElementById('firmaAlanlari');
         var lblAd = document.getElementById('lblAd');
-        var inputMagaza = document.getElementById('inputMagazaAdi');
-        var inputVergi = document.getElementById('inputVergiNo');
 
         if (isSatici) {
             firmaAlanlari.style.display = 'block';
             lblAd.innerText = 'Yetkili Adı';
-            inputMagaza.setAttribute('required', 'required');
-            inputVergi.setAttribute('required', 'required');
         } else {
             firmaAlanlari.style.display = 'none';
             lblAd.innerText = 'Ad';
-            inputMagaza.removeAttribute('required');
-            inputVergi.removeAttribute('required');
         }
     }
 </script>

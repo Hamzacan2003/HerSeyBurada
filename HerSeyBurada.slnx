@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Dockerfile" />
+  </Folder>
   <Project Path="HerSeyBurada.Business/HerSeyBurada.Business.csproj" />
   <Project Path="HerSeyBurada.Core/HerSeyBurada.Core.csproj" />
   <Project Path="HerSeyBurada.DataAccess/HerSeyBurada.DataAccess.csproj" />
