@@ -102,76 +102,89 @@ namespace HerSeyBurada.WebMvcUI.Controllers
         [HttpPost("security/kayitol")]
         public async Task<IActionResult> KayitOl(string Ad, string Soyad, string Eposta, string Sifre, string Rol, string MagazaAdi, string VergiNo)
         {
+            // GELEN TÜM PARAMETRELERİ KONSOLA YAZDIR (HATA TESPİTİ İÇİN)
+            Console.WriteLine($"[KAYIT ISTEGI GELDI] -> Ad: '{Ad}', Soyad: '{Soyad}', Eposta: '{Eposta}', Rol: '{Rol}', Magaza: '{MagazaAdi}', VergiNo: '{VergiNo}'");
+
             if (string.IsNullOrWhiteSpace(Eposta) || string.IsNullOrWhiteSpace(Sifre))
             {
-                TempData["Hata"] = "Lütfen gerekli alanları doldurunuz.";
+                TempData["Hata"] = "Lütfen e-posta ve şifre alanlarını doldurunuz.";
                 return RedirectToAction("Kayitol");
             }
 
             string epostaClean = Eposta.Trim().ToLower();
 
-            // Veritabanı kontrolü (Daha önce kayıtlı e-posta var mı?)
-            var varKullanici = await _context.Kullanicilar.FirstOrDefaultAsync(k => k.Eposta.ToLower() == epostaClean);
-            if (varKullanici != null)
+            try
             {
-                TempData["Hata"] = "Bu e-posta adresi veritabanında zaten kayıtlı! Lütfen farklı bir e-posta giriniz veya giriş yapınız.";
+                // Veritabanı kontrolü (Daha önce kayıtlı e-posta var mı?)
+                var varKullanici = await _context.Kullanicilar.FirstOrDefaultAsync(k => k.Eposta.ToLower() == epostaClean);
+                if (varKullanici != null)
+                {
+                    TempData["Hata"] = "Bu e-posta adresi veritabanında zaten kayıtlı! Lütfen farklı bir e-posta giriniz veya giriş yapınız.";
+                    return RedirectToAction("Kayitol");
+                }
+
+                // 6 Haneli Onay Kodu Üretimi
+                string dogrulamaKodu = new Random().Next(100000, 999999).ToString();
+
+                Console.WriteLine("==========================================");
+                Console.WriteLine($"[HERSEYBURADA DOGRULAMA KODU]: {dogrulamaKodu} | ALICI: {epostaClean}");
+                Console.WriteLine("==========================================");
+
+                // Rol Tespiti: Rol "Satici" geldiyse veya MagazaAdi/VergiNo doluysa FIRMA kabul et
+                bool saticiMi = (!string.IsNullOrWhiteSpace(Rol) && Rol.Equals("Satici", StringComparison.OrdinalIgnoreCase)) ||
+                                !string.IsNullOrWhiteSpace(MagazaAdi) ||
+                                epostaClean.Contains("firma") || epostaClean.Contains("satici");
+
+                string belirlenenRol = saticiMi ? "Satici" : "Musteri";
+
+                // Geçici verileri TempData'ya al
+                TempData["Gecici_Ad"] = string.IsNullOrWhiteSpace(Ad) ? "Firma Yetkilisi" : Ad;
+                TempData["Gecici_Soyad"] = Soyad ?? "";
+                TempData["Gecici_Eposta"] = epostaClean;
+                TempData["Gecici_Sifre"] = Sifre;
+                TempData["Gecici_Rol"] = belirlenenRol;
+                TempData["Gecici_MagazaAdi"] = string.IsNullOrWhiteSpace(MagazaAdi) ? (string.IsNullOrWhiteSpace(Ad) ? "Yeni Mağaza" : Ad) : MagazaAdi;
+                TempData["Gecici_VergiNo"] = string.IsNullOrWhiteSpace(VergiNo) ? "1234567890" : VergiNo;
+                TempData["Gecici_Kod"] = dogrulamaKodu;
+
+                TempData.Keep();
+
+                string htmlIcerik = $@"
+            <div style='font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; text-align: center;'>
+                <h2 style='color: #ff9900;'>HerSeyBurada'ya Hoş Geldiniz!</h2>
+                <p style='color: #555; font-size: 15px;'>Hesabınızı aktif etmek için 6 haneli e-posta doğrulama kodunuz:</p>
+                <div style='background-color: #f8f9fa; border: 2px dashed #ff9900; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #222; margin: 20px 0;'>
+                    {dogrulamaKodu}
+                </div>
+            </div>";
+
+                // GÜVENLİ ARKA PLAN MAİL GÖNDERİMİ
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using (var scope = _serviceProvider.CreateScope())
+                        {
+                            var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                            await emailService.EmailGonderAsync(epostaClean, "E-Posta Doğrulama Kodunuz - HerSeyBurada", htmlIcerik);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[EMAIL SERVICE ARKA PLAN HATA]: {ex.Message}");
+                    }
+                });
+
+                TempData["Mesaj"] = $"{epostaClean} adresinize 6 haneli doğrulama kodu gönderiliyor.";
+                TempData.Keep();
+                return RedirectToAction("EpostaDogrula");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[KAYIT OL EXCEPTION]: {ex.Message}");
+                TempData["Hata"] = "Kayıt işlemi sırasında bir sorun oluştu: " + ex.Message;
                 return RedirectToAction("Kayitol");
             }
-
-            // 6 Haneli Onay Kodu Üretimi
-            string dogrulamaKodu = new Random().Next(100000, 999999).ToString();
-
-            // KODU TERMİNALE / KONSOLA YAZDIR
-            Console.WriteLine("==========================================");
-            Console.WriteLine($"[HERSEYBURADA DOGRULAMA KODU]: {dogrulamaKodu} | ALICI: {epostaClean}");
-            Console.WriteLine("==========================================");
-
-            // Rol tespiti (Firma/Satıcı güvenliği artırıldı)
-            string belirlenenRol = (!string.IsNullOrWhiteSpace(Rol) && Rol.Equals("Satici", StringComparison.OrdinalIgnoreCase)) ||
-                                   epostaClean.Contains("firma") || epostaClean.Contains("satici") ||
-                                   (!string.IsNullOrWhiteSpace(Ad) && Ad.ToLower().Contains("firma")) ? "Satici" : "Musteri";
-
-            // Geçici verileri TempData'ya al
-            TempData["Gecici_Ad"] = Ad;
-            TempData["Gecici_Soyad"] = Soyad ?? "";
-            TempData["Gecici_Eposta"] = epostaClean;
-            TempData["Gecici_Sifre"] = Sifre;
-            TempData["Gecici_Rol"] = belirlenenRol;
-            TempData["Gecici_MagazaAdi"] = string.IsNullOrWhiteSpace(MagazaAdi) ? Ad : MagazaAdi;
-            TempData["Gecici_VergiNo"] = string.IsNullOrWhiteSpace(VergiNo) ? "1234567890" : VergiNo;
-            TempData["Gecici_Kod"] = dogrulamaKodu;
-
-            TempData.Keep(); // Yönlendirme esnasında verileri kilitler
-
-            string htmlIcerik = $@"
-                <div style='font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; text-align: center;'>
-                    <h2 style='color: #ff9900;'>HerSeyBurada'ya Hoş Geldiniz!</h2>
-                    <p style='color: #555; font-size: 15px;'>Hesabınızı aktif etmek için 6 haneli e-posta doğrulama kodunuz:</p>
-                    <div style='background-color: #f8f9fa; border: 2px dashed #ff9900; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #222; margin: 20px 0;'>
-                        {dogrulamaKodu}
-                    </div>
-                </div>";
-
-            // GÜVENLİ ARKA PLAN MAİL GÖNDERİMİ (IServiceProvider ile HttpContext bağımlılığı kaldırıldı)
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    using (var scope = _serviceProvider.CreateScope())
-                    {
-                        var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-                        await emailService.EmailGonderAsync(epostaClean, "E-Posta Doğrulama Kodunuz - HerSeyBurada", htmlIcerik);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[EMAIL SERVICE ARKA PLAN HATA]: {ex.Message}");
-                }
-            });
-
-            TempData["Mesaj"] = $"{epostaClean} adresinize 6 haneli doğrulama kodu gönderiliyor.";
-            TempData.Keep();
-            return RedirectToAction("EpostaDogrula");
         }
 
         [HttpGet("security/epostadogrula")]
