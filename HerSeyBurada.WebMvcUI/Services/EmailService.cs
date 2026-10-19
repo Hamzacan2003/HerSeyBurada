@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Net;
-using System.Net.Mail;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace HerSeyBurada.WebMvcUI.Services
@@ -12,54 +13,51 @@ namespace HerSeyBurada.WebMvcUI.Services
 
     public class EmailService : IEmailService
     {
+        private static readonly HttpClient client = new HttpClient();
+
         public async Task EmailGonderAsync(string aliciEposta, string konu, string icerikHtml)
         {
-            await Task.Run(() =>
+            try
             {
-                try
+                string apiKey = Environment.GetEnvironmentVariable("BREVO_API_KEY");
+
+                if (string.IsNullOrEmpty(apiKey))
                 {
-                    string gonderenEmail = "hamzacana98@gmail.com";
-                    string sifre = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD");
-
-                    if (string.IsNullOrEmpty(sifre))
-                    {
-                        Console.WriteLine("[GMAIL SMTP HATA]: Uygulama şifresi bulunamadı!");
-                        return;
-                    }
-
-                    sifre = sifre.Replace(" ", "").Trim();
-
-                    using (var mail = new MailMessage())
-                    {
-                        mail.From = new MailAddress(gonderenEmail, "HerSeyBurada");
-                        mail.To.Add(aliciEposta);
-                        mail.Subject = konu;
-                        mail.Body = icerikHtml;
-                        mail.IsBodyHtml = true;
-
-                        // Port 465 (SSL) kullanarak Render port engellerini aşıyoruz
-                        using (var smtp = new SmtpClient("smtp.gmail.com", 465))
-                        {
-                            smtp.UseDefaultCredentials = false;
-                            smtp.Credentials = new NetworkCredential(gonderenEmail, sifre);
-                            smtp.EnableSsl = true;
-                            smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
-                            smtp.Timeout = 15000;
-
-                            smtp.Send(mail);
-                            Console.WriteLine($"[GMAIL SMTP BASARILI]: {aliciEposta} adresine mail atıldı.");
-                        }
-                    }
+                    Console.WriteLine("[BREVO HATA]: BREVO_API_KEY bulunamadı!");
+                    return;
                 }
-                catch (Exception ex)
+
+                var requestBody = new
                 {
-                    Console.WriteLine($"[GMAIL SMTP HATA]: {ex.Message}");
-                    if (ex.InnerException != null)
-                    {
-                        Console.WriteLine($"[GMAIL DETAY HATA]: {ex.InnerException.Message}");
-                    }
+                    sender = new { name = "HerSeyBurada", email = "hamzacana98@gmail.com" },
+                    to = new[] { new { email = aliciEposta } },
+                    subject = konu,
+                    htmlContent = icerikHtml
+                };
+
+                var jsonPayload = JsonSerializer.Serialize(requestBody);
+                var request = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email");
+
+                request.Headers.Add("api-key", apiKey);
+                request.Headers.Add("accept", "application/json");
+                request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await client.SendAsync(request);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"[BREVO BASARILI]: {aliciEposta} adresine mail atıldı.");
                 }
-            });
+                else
+                {
+                    string errorDetails = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"[BREVO HATA]: {response.StatusCode} - {errorDetails}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BREVO HATA EXCEPTION]: {ex.Message}");
+            }
         }
     }
 }
