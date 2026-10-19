@@ -14,39 +14,52 @@ namespace HerSeyBurada.WebMvcUI.Services
     {
         public async Task EmailGonderAsync(string aliciEposta, string konu, string icerikHtml)
         {
-            try
+            await Task.Run(() =>
             {
-                string gonderenEmail = "hamzacana98@gmail.com";
-                string sifre = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD");
-
-                if (string.IsNullOrEmpty(sifre))
+                try
                 {
-                    Console.WriteLine("[GMAIL SMTP HATA]: Uygulama şifresi bulunamadı!");
-                    return;
-                }
+                    string gonderenEmail = "hamzacana98@gmail.com";
+                    string sifre = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD");
 
-                using (var smtp = new SmtpClient("smtp.gmail.com", 587))
-                {
-                    smtp.Credentials = new NetworkCredential(gonderenEmail, sifre);
-                    smtp.EnableSsl = true;
-
-                    var mail = new MailMessage
+                    if (string.IsNullOrEmpty(sifre))
                     {
-                        From = new MailAddress(gonderenEmail, "HerSeyBurada"),
-                        Subject = konu,
-                        Body = icerikHtml,
-                        IsBodyHtml = true
-                    };
+                        Console.WriteLine("[GMAIL SMTP HATA]: Uygulama şifresi bulunamadı!");
+                        return;
+                    }
 
-                    mail.To.Add(aliciEposta);
-                    await smtp.SendMailAsync(mail);
-                    Console.WriteLine($"[GMAIL SMTP BASARILI]: {aliciEposta} adresine mail atıldı.");
+                    // Gmail 16 haneli koddaki olası boşlukları temizle
+                    sifre = sifre.Replace(" ", "").Trim();
+
+                    using (var mail = new MailMessage())
+                    {
+                        mail.From = new MailAddress(gonderenEmail, "HerSeyBurada");
+                        mail.To.Add(aliciEposta);
+                        mail.Subject = konu;
+                        mail.Body = icerikHtml;
+                        mail.IsBodyHtml = true;
+
+                        using (var smtp = new SmtpClient("smtp.gmail.com", 587))
+                        {
+                            smtp.UseDefaultCredentials = false;
+                            smtp.Credentials = new NetworkCredential(gonderenEmail, sifre);
+                            smtp.EnableSsl = true;
+                            smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
+                            smtp.Timeout = 10000; // 10 saniye zaman aşımı
+
+                            smtp.Send(mail);
+                            Console.WriteLine($"[GMAIL SMTP BASARILI]: {aliciEposta} adresine mail atıldı.");
+                        }
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[GMAIL SMTP HATA]: {ex.Message}");
-            }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[GMAIL SMTP HATA]: {ex.Message}");
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine($"[GMAIL DETAY HATA]: {ex.InnerException.Message}");
+                    }
+                }
+            });
         }
     }
 }
