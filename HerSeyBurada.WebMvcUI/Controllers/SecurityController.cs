@@ -146,11 +146,16 @@ namespace HerSeyBurada.WebMvcUI.Controllers
 
             // HIZLANDIRMA DÜZELTMESİ (Fire and Forget - Arka Planda Mail Gönderimi):
             // 'await' kaldırıldı! Kullanıcı mailin sunucular arasında iletilmesini beklemeden 1 saniyede doğrulama sayfasına geçer.
+            // Güvenli Arka Plan Gönderimi
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await _emailService.EmailGonderAsync(epostaClean, "E-Posta Doğrulama Kodunuz - HerSeyBurada", htmlIcerik);
+                    using (var scope = HttpContext.RequestServices.CreateScope())
+                    {
+                        var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                        await emailService.EmailGonderAsync(epostaClean, "E-Posta Doğrulama Kodunuz - HerSeyBurada", htmlIcerik);
+                    }
                 }
                 catch (Exception ex)
                 {
