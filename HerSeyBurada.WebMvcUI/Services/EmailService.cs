@@ -12,45 +12,41 @@ namespace HerSeyBurada.WebMvcUI.Services
 
     public class EmailService : IEmailService
     {
-        public Task EmailGonderAsync(string aliciEposta, string konu, string icerikHtml)
+        public async Task EmailGonderAsync(string aliciEposta, string konu, string icerikHtml)
         {
-            // Sayfanın dönüp kilitlenmemesi için arka planda tetikliyoruz
-            _ = Task.Run(async () =>
+            try
             {
-                try
+                // Render 587 SMTP portunu engellediği için 465 SSL kullanıyoruz
+                string smtpHost = "smtp.gmail.com";
+                int smtpPort = 465;
+
+                string gonderenEposta = "hamzacana98@gmail.com";
+                string gonderenSifre = "agjrpgigukkivbeu"; // Google Uygulama Şifreniz
+
+                using (var client = new SmtpClient(smtpHost, smtpPort))
                 {
-                    string smtpHost = "smtp.gmail.com";
-                    int smtpPort = 587;
+                    client.Credentials = new NetworkCredential(gonderenEposta, gonderenSifre);
+                    client.EnableSsl = true;
+                    client.Timeout = 15000; // 15 Saniye Zaman Aşımı
 
-                    string gonderenEposta = "hamzacana98@gmail.com";
-                    string gonderenSifre = "agjrpgigukkivbeu";
-
-                    using (var client = new SmtpClient(smtpHost, smtpPort))
+                    var mailMessage = new MailMessage
                     {
-                        client.Credentials = new NetworkCredential(gonderenEposta, gonderenSifre);
-                        client.EnableSsl = true;
+                        From = new MailAddress(gonderenEposta, "HerSeyBurada Pazaryeri"),
+                        Subject = konu,
+                        Body = icerikHtml,
+                        IsBodyHtml = true
+                    };
 
-                        var mailMessage = new MailMessage
-                        {
-                            From = new MailAddress(gonderenEposta, "HerSeyBurada Pazaryeri"),
-                            Subject = konu,
-                            Body = icerikHtml,
-                            IsBodyHtml = true
-                        };
+                    mailMessage.To.Add(aliciEposta);
 
-                        mailMessage.To.Add(aliciEposta);
-
-                        await client.SendMailAsync(mailMessage);
-                        Console.WriteLine($"[GMAIL SMTP BASARILI]: {aliciEposta} adresine mail atıldı.");
-                    }
+                    await client.SendMailAsync(mailMessage);
+                    Console.WriteLine($"[GMAIL SMTP GERCEK BASARILI]: {aliciEposta} adresine mail ulaştırıldı.");
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[GMAIL SMTP HATA]: {ex.Message}");
-                }
-            });
-
-            return Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GMAIL SMTP HATA DETAYI]: {ex.Message} - {ex.InnerException?.Message}");
+            }
         }
     }
 }
