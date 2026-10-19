@@ -12,8 +12,12 @@
             {
                 <div class="alert alert-danger font-semibold">@ViewBag.Hata</div>
             }
+            @if (TempData["Hata"] != null)
+            {
+                <div class="alert alert-danger font-semibold">@TempData["Hata"]</div>
+            }
 
-            <form action="/security/kayitol" method="post">
+            <form asp-controller="Security" asp-action="KayitOl" method="post">
                 <!-- Üyelik Tipi Seçimi -->
                 <div class="mb-4">
                     <label class="form-label fw-bold d-block">Hesap Türünü Seçiniz</label>
@@ -41,11 +45,11 @@
                 <div id="firmaAlanlari" style="display:none;">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Mağaza / Firma Ticari Adı</label>
-                        <input type="text" name="MagazaAdi" class="form-control" placeholder="Örn: ABC Teknoloji Ltd." />
+                        <input type="text" id="inputMagazaAdi" name="MagazaAdi" class="form-control" placeholder="Örn: ABC Teknoloji Ltd." />
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Vergi Numarası / TC No</label>
-                        <input type="text" name="VergiNo" class="form-control" placeholder="10 Haneli Vergi No" />
+                        <input type="text" id="inputVergiNo" name="VergiNo" class="form-control" placeholder="10 Haneli Vergi No" />
                     </div>
                 </div>
 
@@ -75,13 +79,19 @@
         var isSatici = document.getElementById('rolSatici').checked;
         var firmaAlanlari = document.getElementById('firmaAlanlari');
         var lblAd = document.getElementById('lblAd');
+        var inputMagaza = document.getElementById('inputMagazaAdi');
+        var inputVergi = document.getElementById('inputVergiNo');
 
         if (isSatici) {
             firmaAlanlari.style.display = 'block';
             lblAd.innerText = 'Yetkili Adı';
+            inputMagaza.setAttribute('required', 'required');
+            inputVergi.setAttribute('required', 'required');
         } else {
             firmaAlanlari.style.display = 'none';
             lblAd.innerText = 'Ad';
+            inputMagaza.removeAttribute('required');
+            inputVergi.removeAttribute('required');
         }
     }
 </script>
