@@ -27,7 +27,6 @@ namespace HerSeyBurada.WebMvcUI.Services
                         return;
                     }
 
-                    // Gmail 16 haneli koddaki olası boşlukları temizle
                     sifre = sifre.Replace(" ", "").Trim();
 
                     using (var mail = new MailMessage())
@@ -38,13 +37,14 @@ namespace HerSeyBurada.WebMvcUI.Services
                         mail.Body = icerikHtml;
                         mail.IsBodyHtml = true;
 
-                        using (var smtp = new SmtpClient("smtp.gmail.com", 587))
+                        // Port 465 (SSL) kullanarak Render port engellerini aşıyoruz
+                        using (var smtp = new SmtpClient("smtp.gmail.com", 465))
                         {
                             smtp.UseDefaultCredentials = false;
                             smtp.Credentials = new NetworkCredential(gonderenEmail, sifre);
                             smtp.EnableSsl = true;
                             smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
-                            smtp.Timeout = 10000; // 10 saniye zaman aşımı
+                            smtp.Timeout = 15000;
 
                             smtp.Send(mail);
                             Console.WriteLine($"[GMAIL SMTP BASARILI]: {aliciEposta} adresine mail atıldı.");
