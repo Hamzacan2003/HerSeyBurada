@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Net;
-using System.Net.Mail;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace HerSeyBurada.WebMvcUI.Services
@@ -12,40 +13,50 @@ namespace HerSeyBurada.WebMvcUI.Services
 
     public class EmailService : IEmailService
     {
+        private static readonly HttpClient _httpClient = new HttpClient();
+
         public async Task EmailGonderAsync(string aliciEposta, string konu, string icerikHtml)
         {
             try
             {
-                // Render 587 SMTP portunu engellediği için 465 SSL kullanıyoruz
-                string smtpHost = "smtp.gmail.com";
-                int smtpPort = 465;
+                // API Anahtarını Render veya sistem ortam değişkenlerinden alıyoruz
+                string apiKey = Environment.GetEnvironmentVariable("BREVO_API_KEY");
 
-                string gonderenEposta = "hamzacana98@gmail.com";
-                string gonderenSifre = "agjrpgigukkivbeu"; // Google Uygulama Şifreniz
-
-                using (var client = new SmtpClient(smtpHost, smtpPort))
+                if (string.IsNullOrEmpty(apiKey))
                 {
-                    client.Credentials = new NetworkCredential(gonderenEposta, gonderenSifre);
-                    client.EnableSsl = true;
-                    client.Timeout = 15000; // 15 Saniye Zaman Aşımı
+                    Console.WriteLine("[BREVO EMAIL HATA]: BREVO_API_KEY bulunamadı!");
+                    return;
+                }
 
-                    var mailMessage = new MailMessage
-                    {
-                        From = new MailAddress(gonderenEposta, "HerSeyBurada Pazaryeri"),
-                        Subject = konu,
-                        Body = icerikHtml,
-                        IsBodyHtml = true
-                    };
+                var payload = new
+                {
+                    sender = new { name = "HerSeyBurada Pazaryeri", email = "hamzacana98@gmail.com" },
+                    to = new[] { new { email = aliciEposta } },
+                    subject = konu,
+                    htmlContent = icerikHtml
+                };
 
-                    mailMessage.To.Add(aliciEposta);
+                string jsonPayload = JsonSerializer.Serialize(payload);
+                var request = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email");
 
-                    await client.SendMailAsync(mailMessage);
-                    Console.WriteLine($"[GMAIL SMTP GERCEK BASARILI]: {aliciEposta} adresine mail ulaştırıldı.");
+                request.Headers.Add("api-key", apiKey);
+                request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.SendAsync(request);
+                string responseBody = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"[BREVO EMAIL GERCEK BASARILI]: {aliciEposta} adresine gönderildi.");
+                }
+                else
+                {
+                    Console.WriteLine($"[BREVO EMAIL HATA]: {response.StatusCode} - {responseBody}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GMAIL SMTP HATA DETAYI]: {ex.Message} - {ex.InnerException?.Message}");
+                Console.WriteLine($"[EMAIL ISTISNA HATA]: {ex.Message}");
             }
         }
     }
