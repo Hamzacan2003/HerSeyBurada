@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Net.Http;
-using System.Text;
-using System.Text.Json;
+using System.Net;
+using System.Net.Mail;
 using System.Threading.Tasks;
 
 namespace HerSeyBurada.WebMvcUI.Services
@@ -13,51 +12,40 @@ namespace HerSeyBurada.WebMvcUI.Services
 
     public class EmailService : IEmailService
     {
-        private static readonly HttpClient _httpClient = new HttpClient();
-
         public async Task EmailGonderAsync(string aliciEposta, string konu, string icerikHtml)
         {
             try
             {
-                // API Anahtarını Render veya ortam değişkenlerinden alıyoruz
-                string apiKey = Environment.GetEnvironmentVariable("BREVO_API_KEY");
+                string gonderenEmail = "hamzacana98@gmail.com";
+                string sifre = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD");
 
-                if (string.IsNullOrEmpty(apiKey))
+                if (string.IsNullOrEmpty(sifre))
                 {
-                    Console.WriteLine("[RESEND EMAIL HATA]: API Key bulunamadı!");
+                    Console.WriteLine("[GMAIL SMTP HATA]: Uygulama şifresi bulunamadı!");
                     return;
                 }
 
-                // Resend test aşamasında gönderici olarak 'onboarding@resend.dev' kullanır
-                var payload = new
+                using (var smtp = new SmtpClient("smtp.gmail.com", 587))
                 {
-                    from = "HerSeyBurada <onboarding@resend.dev>",
-                    to = new[] { aliciEposta },
-                    subject = konu,
-                    html = icerikHtml
-                };
+                    smtp.Credentials = new NetworkCredential(gonderenEmail, sifre);
+                    smtp.EnableSsl = true;
 
-                string jsonPayload = JsonSerializer.Serialize(payload);
-                var request = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails");
+                    var mail = new MailMessage
+                    {
+                        From = new MailAddress(gonderenEmail, "HerSeyBurada"),
+                        Subject = konu,
+                        Body = icerikHtml,
+                        IsBodyHtml = true
+                    };
 
-                request.Headers.Add("Authorization", $"Bearer {apiKey}");
-                request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                var response = await _httpClient.SendAsync(request);
-                string responseBody = await response.Content.ReadAsStringAsync();
-
-                if (response.IsSuccessStatusCode)
-                {
-                    Console.WriteLine($"[RESEND EMAIL BASARILI]: {aliciEposta} adresine gönderildi.");
-                }
-                else
-                {
-                    Console.WriteLine($"[RESEND EMAIL HATA]: {response.StatusCode} - {responseBody}");
+                    mail.To.Add(aliciEposta);
+                    await smtp.SendMailAsync(mail);
+                    Console.WriteLine($"[GMAIL SMTP BASARILI]: {aliciEposta} adresine mail atıldı.");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[EMAIL ISTISNA HATA]: {ex.Message}");
+                Console.WriteLine($"[GMAIL SMTP HATA]: {ex.Message}");
             }
         }
     }
