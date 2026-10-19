@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HerSeyBurada.WebMvcUI.Controllers
 {
@@ -18,11 +19,13 @@ namespace HerSeyBurada.WebMvcUI.Controllers
     {
         private readonly HerSeyBuradaDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly IServiceProvider _serviceProvider; // HttpContext'ten bağımsız arka plan servis kontrolü için eklendi
 
-        public SecurityController(HerSeyBuradaDbContext context, IEmailService emailService)
+        public SecurityController(HerSeyBuradaDbContext context, IEmailService emailService, IServiceProvider serviceProvider)
         {
             _context = context;
             _emailService = emailService;
+            _serviceProvider = serviceProvider;
         }
 
         [HttpGet("security/girisyap")]
@@ -123,14 +126,19 @@ namespace HerSeyBurada.WebMvcUI.Controllers
             Console.WriteLine($"[HERSEYBURADA DOGRULAMA KODU]: {dogrulamaKodu} | ALICI: {epostaClean}");
             Console.WriteLine("==========================================");
 
+            // Rol tespiti (Firma/Satıcı güvenliği artırıldı)
+            string belirlenenRol = (!string.IsNullOrWhiteSpace(Rol) && Rol.Equals("Satici", StringComparison.OrdinalIgnoreCase)) ||
+                                   epostaClean.Contains("firma") || epostaClean.Contains("satici") ||
+                                   (!string.IsNullOrWhiteSpace(Ad) && Ad.ToLower().Contains("firma")) ? "Satici" : "Musteri";
+
             // Geçici verileri TempData'ya al
             TempData["Gecici_Ad"] = Ad;
             TempData["Gecici_Soyad"] = Soyad ?? "";
             TempData["Gecici_Eposta"] = epostaClean;
             TempData["Gecici_Sifre"] = Sifre;
-            TempData["Gecici_Rol"] = Rol ?? "Musteri";
-            TempData["Gecici_MagazaAdi"] = MagazaAdi;
-            TempData["Gecici_VergiNo"] = VergiNo;
+            TempData["Gecici_Rol"] = belirlenenRol;
+            TempData["Gecici_MagazaAdi"] = string.IsNullOrWhiteSpace(MagazaAdi) ? Ad : MagazaAdi;
+            TempData["Gecici_VergiNo"] = string.IsNullOrWhiteSpace(VergiNo) ? "1234567890" : VergiNo;
             TempData["Gecici_Kod"] = dogrulamaKodu;
 
             TempData.Keep(); // Yönlendirme esnasında verileri kilitler
@@ -144,14 +152,12 @@ namespace HerSeyBurada.WebMvcUI.Controllers
                     </div>
                 </div>";
 
-            // HIZLANDIRMA DÜZELTMESİ (Fire and Forget - Arka Planda Mail Gönderimi):
-            // 'await' kaldırıldı! Kullanıcı mailin sunucular arasında iletilmesini beklemeden 1 saniyede doğrulama sayfasına geçer.
-            // Güvenli Arka Plan Gönderimi
+            // GÜVENLİ ARKA PLAN MAİL GÖNDERİMİ (IServiceProvider ile HttpContext bağımlılığı kaldırıldı)
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    using (var scope = HttpContext.RequestServices.CreateScope())
+                    using (var scope = _serviceProvider.CreateScope())
                     {
                         var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
                         await emailService.EmailGonderAsync(epostaClean, "E-Posta Doğrulama Kodunuz - HerSeyBurada", htmlIcerik);
@@ -198,7 +204,7 @@ namespace HerSeyBurada.WebMvcUI.Controllers
             string magazaAdi = TempData["Gecici_MagazaAdi"]?.ToString();
             string vergiNo = TempData["Gecici_VergiNo"]?.ToString();
 
-            bool saticiMi = rol == "Satici" || (eposta != null && (eposta.Contains("firma") || eposta.Contains("satici"))) || (ad != null && ad.ToLower().Contains("firma"));
+            bool saticiMi = rol == "Satici";
             string finalRol = saticiMi ? "Satici" : "Musteri";
 
             var yeniKullanici = new Kullanici
