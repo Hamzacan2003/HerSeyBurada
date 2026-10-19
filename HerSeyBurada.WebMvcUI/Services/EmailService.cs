@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Net;
-using System.Net.Mail;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace HerSeyBurada.WebMvcUI.Services
@@ -12,32 +13,50 @@ namespace HerSeyBurada.WebMvcUI.Services
 
     public class EmailService : IEmailService
     {
+        private static readonly HttpClient _httpClient = new HttpClient();
+
         public async Task EmailGonderAsync(string aliciEposta, string konu, string icerikHtml)
         {
-            string smtpHost = "smtp.gmail.com";
-            // Render üzerinde 587 takıldığı için 465 (SSL) kullanıyoruz
-            int smtpPort = 465;
-
-            string gonderenEposta = "hamzacana98@gmail.com";
-            string gonderenSifre = "agjrpgigukkivbeu";
-
-            using (var client = new SmtpClient(smtpHost, smtpPort))
+            try
             {
-                client.Credentials = new NetworkCredential(gonderenEposta, gonderenSifre);
-                client.EnableSsl = true;
-                client.Timeout = 8000; // 8 saniye içinde yanıt alamazsa takılı kalmasın, sayfayı dondurmasın
+                // API Anahtarını Render Ortam Değişkenlerinden (Environment Variable) okuyoruz
+                string apiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY");
 
-                var mailMessage = new MailMessage
+                if (string.IsNullOrWhiteSpace(apiKey))
                 {
-                    From = new MailAddress(gonderenEposta, "HerSeyBurada Pazaryeri"),
-                    Subject = konu,
-                    Body = icerikHtml,
-                    IsBodyHtml = true
+                    Console.WriteLine("[RESEND EMAIL HATA]: RESEND_API_KEY ortam değişkeni bulunamadı!");
+                    return;
+                }
+
+                var payload = new
+                {
+                    from = "HerSeyBurada <onboarding@resend.dev>",
+                    to = new[] { aliciEposta },
+                    subject = konu,
+                    html = icerikHtml
                 };
 
-                mailMessage.To.Add(aliciEposta);
+                string jsonPayload = JsonSerializer.Serialize(payload);
+                var request = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails");
 
-                await client.SendMailAsync(mailMessage);
+                request.Headers.Add("Authorization", $"Bearer {apiKey}");
+                request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.SendAsync(request);
+                string responseBody = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"[RESEND EMAIL BASARILI]: {aliciEposta} adresine gönderildi.");
+                }
+                else
+                {
+                    Console.WriteLine($"[RESEND EMAIL HATA]: {response.StatusCode} - {responseBody}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[EMAIL ISTISNA HATA]: {ex.Message}");
             }
         }
     }
