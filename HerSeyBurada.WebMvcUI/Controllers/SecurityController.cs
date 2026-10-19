@@ -137,33 +137,27 @@ namespace HerSeyBurada.WebMvcUI.Controllers
 
             TempData.Keep();
 
-            string htmlIcerik = $@"
-        <div style='font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; text-align: center;'>
-            <h2 style='color: #ff9900;'>HerSeyBurada'ya Hoş Geldiniz!</h2>
-            <p style='color: #555; font-size: 15px;'>Hesabınızı aktif etmek için 6 haneli e-posta doğrulama kodunuz:</p>
-            <div style='background-color: #f8f9fa; border: 2px dashed #ff9900; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #222; margin: 20px 0;'>
-                {dogrulamaKodu}
-            </div>
-        </div>";
+            string htmlIcerik = $@" 
+    <div style='font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; text-align: center;'>     
+        <h2 style='color: #ff9900;'>HerSeyBurada'ya Hoş Geldiniz!</h2>     
+        <p style='color: #555; font-size: 15px;'>Hesabınızı aktif etmek için 6 haneli e-posta doğrulama kodunuz:</p>     
+        <div style='background-color: #f8f9fa; border: 2px dashed #ff9900; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #222; margin: 20px 0;'>         
+            {dogrulamaKodu}     
+        </div> 
+    </div>";
 
-            // Arka plan e-posta gönderimi
-            _ = Task.Run(async () =>
+            // Doğrudan e-posta gönderimi (Arka plan Task.Run kaldırıldı)
+            try
             {
-                try
-                {
-                    using (var scope = _serviceProvider.CreateScope())
-                    {
-                        var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-                        await emailService.EmailGonderAsync(epostaClean, "E-Posta Doğrulama Kodunuz - HerSeyBurada", htmlIcerik);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[EMAIL HATA]: {ex.Message}");
-                }
-            });
+                await _emailService.EmailGonderAsync(epostaClean, "E-Posta Doğrulama Kodunuz - HerSeyBurada", htmlIcerik);
+                Console.WriteLine($"[EMAIL BASARILI]: {epostaClean} adresine mail atıldı.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[EMAIL HATA]: {ex.Message}");
+            }
 
-            TempData["Mesaj"] = $"{epostaClean} adresinize 6 haneli doğrulama kodu gönderiliyor.";
+            TempData["Mesaj"] = $"{epostaClean} adresinize 6 haneli doğrulama kodu gönderildi.";
             TempData.Keep();
 
             return RedirectToAction("EpostaDogrula");

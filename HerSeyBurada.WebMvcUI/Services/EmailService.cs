@@ -20,7 +20,7 @@ namespace HerSeyBurada.WebMvcUI.Services
 
             // ⚠️ BURAYA KENDİ GMAIL ADRESİNİ VE ALDIĞIN 16 HANELİ UYGULAMA ŞİFRESİNİ YAZ ⚠️
             string gonderenEposta = "hamzacana98@gmail.com";
-            string gonderenSifre = "nwzaeluflbbnqliz"; 
+            string gonderenSifre = "agjrpgigukkivbeu"; 
 
             using (var client = new SmtpClient(smtpHost, smtpPort))
             {
