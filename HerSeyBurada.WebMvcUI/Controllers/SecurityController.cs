@@ -118,7 +118,7 @@ namespace HerSeyBurada.WebMvcUI.Controllers
             // 6 Haneli Onay Kodu Üretimi
             string dogrulamaKodu = new Random().Next(100000, 999999).ToString();
 
-            // KODU DOĞRUDAN TERMİNALE / KONSOLA YAZDIR
+            // KODU TERMİNALE / KONSOLA YAZDIR
             Console.WriteLine("==========================================");
             Console.WriteLine($"[HERSEYBURADA DOGRULAMA KODU]: {dogrulamaKodu} | ALICI: {epostaClean}");
             Console.WriteLine("==========================================");
@@ -144,17 +144,21 @@ namespace HerSeyBurada.WebMvcUI.Controllers
                     </div>
                 </div>";
 
-            try
+            // HIZLANDIRMA DÜZELTMESİ (Fire and Forget - Arka Planda Mail Gönderimi):
+            // 'await' kaldırıldı! Kullanıcı mailin sunucular arasında iletilmesini beklemeden 1 saniyede doğrulama sayfasına geçer.
+            _ = Task.Run(async () =>
             {
-                await _emailService.EmailGonderAsync(epostaClean, "E-Posta Doğrulama Kodunuz - HerSeyBurada", htmlIcerik);
-                TempData["Mesaj"] = $"{epostaClean} adresinize 6 haneli doğrulama kodu gönderildi!";
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[EMAIL SERVICE HATA]: {ex.Message}");
-                TempData["Mesaj"] = "Doğrulama kodu e-postaya iletilemedi ancak konsola yazdırıldı. Lütfen terminaldeki kodu giriniz.";
-            }
+                try
+                {
+                    await _emailService.EmailGonderAsync(epostaClean, "E-Posta Doğrulama Kodunuz - HerSeyBurada", htmlIcerik);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[EMAIL SERVICE ARKA PLAN HATA]: {ex.Message}");
+                }
+            });
 
+            TempData["Mesaj"] = $"{epostaClean} adresinize 6 haneli doğrulama kodu gönderiliyor.";
             TempData.Keep();
             return RedirectToAction("EpostaDogrula");
         }
