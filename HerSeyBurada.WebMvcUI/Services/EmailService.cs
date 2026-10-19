@@ -14,18 +14,18 @@ namespace HerSeyBurada.WebMvcUI.Services
     {
         public async Task EmailGonderAsync(string aliciEposta, string konu, string icerikHtml)
         {
-            // Gmail SMTP Sunucu Bilgileri
             string smtpHost = "smtp.gmail.com";
-            int smtpPort = 587;
+            // Render üzerinde 587 takıldığı için 465 (SSL) kullanıyoruz
+            int smtpPort = 465;
 
-            // ⚠️ BURAYA KENDİ GMAIL ADRESİNİ VE ALDIĞIN 16 HANELİ UYGULAMA ŞİFRESİNİ YAZ ⚠️
             string gonderenEposta = "hamzacana98@gmail.com";
-            string gonderenSifre = "agjrpgigukkivbeu"; 
+            string gonderenSifre = "agjrpgigukkivbeu";
 
             using (var client = new SmtpClient(smtpHost, smtpPort))
             {
                 client.Credentials = new NetworkCredential(gonderenEposta, gonderenSifre);
                 client.EnableSsl = true;
+                client.Timeout = 8000; // 8 saniye içinde yanıt alamazsa takılı kalmasın, sayfayı dondurmasın
 
                 var mailMessage = new MailMessage
                 {
