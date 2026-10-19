@@ -14,5 +14,12 @@ RUN dotnet publish "HerSeyBurada.WebMvcUI.csproj" -c Release -o /app/publish /p:
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
+
+# Eksik olan Kerberos / GSSAPI kütüphanelerini Linux sunucusuna kuruyoruz:
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgssapi-krb5-2 \
+    krb5-user \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "HerSeyBurada.WebMvcUI.dll"]
