@@ -1,0 +1,83 @@
+﻿@{
+    ViewData["Title"] = "Favorilerim - HerSeyBurada";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container my-4">
+    <div class="d-flex align-items-center mb-4">
+        <i class="bi bi-heart-fill text-danger display-6 me-2"></i>
+        <h3 class="fw-bold text-dark mb-0">Favorilerim</h3>
+    </div>
+
+    <div id="favoriListesiContainer" class="row g-4">
+        <!-- JavaScript ile localStorage'dan dinamik dolacak -->
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        favorileriYukle();
+    });
+
+    function favorileriYukle() {
+        let favoriler = JSON.parse(localStorage.getItem('favoriListesi')) || [];
+        let container = $('#favoriListesiContainer');
+        container.empty();
+
+        if (favoriler.length === 0) {
+            container.html(`
+                <div class="col-12 text-center py-5">
+                    <div class="card p-5 border-0 shadow-sm rounded-4 bg-white">
+                        <i class="bi bi-heart display-1 text-muted mb-3"></i>
+                        <h4 class="fw-bold text-secondary">Favori Listeniz Henüz Boş</h4>
+                        <p class="text-muted">Beğendiğiniz ürünleri favorilerinize ekleyerek burada listeleyebilirsiniz.</p>
+                        <div>
+                            <a href="/urun/liste" class="btn bg-trendyol fw-bold px-4 rounded-3">Alışverişe Başla</a>
+                        </div>
+                    </div>
+                </div>
+            `);
+            return;
+        }
+
+        favoriler.forEach(function (item) {
+            let html = `
+                <div class="col-md-3" id="fav-item-${item.id}">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden product-card bg-white" onclick="location.href='/urun/detay/${item.id}'" style="cursor:pointer;">
+                        <div class="position-relative">
+                            <span class="badge bg-warning text-dark position-absolute top-0 start-0 m-2 px-2 py-1 fw-bold">Satıcı: ${item.marka || 'Mağaza'}</span>
+                            <button type="button" class="btn btn-light rounded-circle position-absolute top-0 end-0 m-2 shadow-sm border-0" onclick="event.stopPropagation(); favoriCikar('${item.id}');">
+                                <i class="bi bi-trash text-danger fs-5"></i>
+                            </button>
+                            <img src="${item.resim}" class="card-img-top" style="height:220px; object-fit:cover;" alt="${item.ad}">
+                        </div>
+                        <div class="card-body p-3 d-flex flex-column justify-content-between">
+                            <div>
+                                <h6 class="card-title text-truncate fw-bold text-dark mb-1">${item.ad}</h6>
+                                <div class="fw-bold fs-5 text-danger mt-2">${item.fiyat} TL</div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-0 pb-3">
+                            <button type="button" class="btn bg-trendyol w-100 fw-bold shadow-sm" onclick="event.stopPropagation(); sepeteEkleDinamik('${item.id}', '${item.ad}', '${item.fiyat}', '${item.resim}', '${item.marka}');">SEPETE EKLE</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.append(html);
+        });
+    }
+
+    function favoriCikar(id) {
+        let favoriler = JSON.parse(localStorage.getItem('favoriListesi')) || [];
+        favoriler = favoriler.filter(x => x.id !== id);
+        localStorage.setItem('favoriListesi', JSON.stringify(favoriler));
+        favorileriYukle();
+    }
+
+    function sepeteEkleDinamik(id, ad, fiyat, resim, marka) {
+        let sepet = JSON.parse(localStorage.getItem('sepetListesi')) || [];
+        sepet.push({ id: id, ad: ad, fiyat: parseFloat(fiyat), resim: resim, marka: marka, adet: 1 });
+        localStorage.setItem('sepetListesi', JSON.stringify(sepet));
+        alert(ad + " sepetinize eklendi!");
+    }
+</script>

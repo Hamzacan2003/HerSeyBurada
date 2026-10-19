@@ -1,0 +1,228 @@
+﻿@model HerSeyBurada.Core.Entities.Urun
+
+@{
+    ViewData["Title"] = Model.Ad + " - Ürün Detayı";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var gorseller = !string.IsNullOrEmpty(Model.GorselUrl)
+            ? Model.GorselUrl.Split(',').ToList()
+            : new List<string> { "/uploads/default.jpg" };
+}
+
+<div class="container my-4">
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <div class="row g-4">
+            <!-- Görseller -->
+            <div class="col-md-5">
+                <img src="@gorseller[0]" id="anaGorsel" class="img-fluid rounded-4 w-100 shadow-sm" style="max-height: 420px; object-fit: cover;" />
+                @if (gorseller.Count > 1)
+                {
+                    <div class="d-flex gap-2 mt-3 overflow-auto">
+                        @foreach (var g in gorseller)
+                        {
+                            <img src="@g" class="rounded-3 border kucuk-gorsel" style="width: 70px; height: 70px; object-fit: cover; cursor: pointer;" onclick="document.getElementById('anaGorsel').src = this.src" />
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Bilgiler -->
+            <div class="col-md-7">
+                <span class="badge bg-warning text-dark fw-bold px-3 py-2 fs-6 mb-2">Satıcı: @(Model.Magaza != null ? Model.Magaza.MagazaAdi : "Mağaza")</span>
+                <h2 class="fw-bold text-dark">@Model.Ad</h2>
+                <h3 class="text-danger fw-bold fs-1 my-3">@Model.SatisFiyati.ToString("N2") TL</h3>
+
+                <!-- Renk Seçeneği -->
+                @if (Model.Varyantlar != null && Model.Varyantlar.Any())
+                {
+                    var renkler = Model.Varyantlar.Select(v => v.Renk).Distinct().ToList();
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted">Renk Seçeneği:</label>
+                        <div class="d-flex gap-2 flex-wrap" id="renkAlani">
+                            @for (int i = 0; i < renkler.Count; i++)
+                            {
+                                var r = renkler[i];
+                                <button type="button" class="btn btn-outline-dark fw-bold renk-btn @(i == 0 ? "active bg-dark text-white" : "")" data-renk="@r">
+                                    @r
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Beden / Stok -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-muted">Beden / Stok Seçiniz:</label>
+                        <div class="d-flex gap-2 flex-wrap" id="bedenAlani"></div>
+                    </div>
+                }
+
+                <!-- Adet ve Sepet -->
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <label class="fw-bold">Adet Seçimi:</label>
+                    <div class="input-group" style="width: 130px;">
+                        <button type="button" class="btn btn-outline-secondary fw-bold" id="btnAzalt">-</button>
+                        <input type="number" id="adetInput" class="form-control text-center fw-bold" value="1" min="1" readonly />
+                        <button type="button" class="btn btn-outline-secondary fw-bold" id="btnArttir">+</button>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-warning text-white fw-bold btn-lg flex-grow-1 shadow-sm py-3" id="btnSepetEkleAction">
+                        <i class="bi bi-cart-plus me-2"></i> SEPETE EKLE
+                    </button>
+                </div>
+
+                <div class="mt-4 pt-3 border-top">
+                    <p class="text-secondary">@Model.Aciklama</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Yorum Yap Paneli -->
+    <!-- YORUM YAP VE DEĞERLENDİRME MODÜLÜ -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mt-4 bg-white">
+        <h4 class="fw-bold text-primary mb-3"><i class="bi bi-chat-left-text me-2"></i> Ürün Değerlendirmeleri ve Yorumlar</h4>
+
+        @if (TempData["Mesaj"] != null)
+        {
+            <div class="alert alert-success fw-bold">@TempData["Mesaj"]</div>
+        }
+
+        @if (User.Identity != null && User.Identity.IsAuthenticated)
+        {
+            <div class="bg-light p-3 rounded-3 mb-4 border">
+                <h6 class="fw-bold mb-2">Bu Ürünü Değerlendir:</h6>
+                <form action="/urun/yorum-ekle" method="post">
+                    <input type="hidden" name="UrunId" value="@Model.Id" />
+
+                    <div class="mb-2">
+                        <select name="Puan" class="form-select w-auto fw-bold text-warning">
+                            <option value="5">⭐⭐⭐⭐⭐ 5 Yıldız (Mükemmel)</option>
+                            <option value="4">⭐⭐⭐⭐ 4 Yıldız (Çok İyi)</option>
+                            <option value="3">⭐⭐⭐ 3 Yıldız (Orta)</option>
+                            <option value="2">⭐⭐ 2 Yıldız (Kötü)</option>
+                            <option value="1">⭐ 1 Yıldız (Çok Kötü)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <textarea name="Yorum" class="form-control" rows="3" placeholder="Ürün kalitesi, bedeni ve kargolama hakkında deneyimlerinizi yazın..." required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary fw-bold">Yorumu Gönder</button>
+                </form>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning fw-bold">
+                Yorum yapabilmek için <a href="/security/girisyap" class="alert-link">Giriş Yapmalısınız</a>.
+            </div>
+        }
+
+        <!-- KAYITLI TÜM YORUMLARIN LİSTELENMESİ -->
+        @{
+            var yorumlar = ViewBag.Yorumlar as List<HerSeyBurada.WebMvcUI.Controllers.UrunController.YorumItem>;
+        }
+
+        @if (yorumlar != null && yorumlar.Any())
+        {
+            <div class="mt-3">
+                @foreach (var y in yorumlar)
+                {
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-dark"><i class="bi bi-person-circle me-1 text-primary"></i> @y.KullaniciAd</span>
+                            <span class="text-warning fw-bold">
+                                @for (int i = 0; i < y.Puan; i++)
+                                {
+                                    <span>⭐</span>
+                                }
+                            </span>
+                        </div>
+                        <p class="text-muted mb-1">@y.Yorum</p>
+                        <small class="text-secondary" style="font-size:11px;">@y.Tarih.ToString("dd.MM.yyyy HH:mm")</small>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-muted italic">Henüz bu ürün için yapılmış bir değerlendirme bulunmuyor. İlk yorumu siz yapın!</p>
+        }
+    </div>
+</div>
+
+<script>
+    var varyantlar = @Html.Raw(ViewBag.VaryantJson ?? "[]");
+    var secilenRenk = "";
+    var secilenBeden = "";
+
+    $(document).ready(function () {
+        if (varyantlar && varyantlar.length > 0) {
+            secilenRenk = $(".renk-btn.active").data("renk");
+            bedenleriYukle(secilenRenk);
+        }
+
+        $(document).on("click", ".renk-btn", function () {
+            $(".renk-btn").removeClass("active bg-dark text-white");
+            $(this).addClass("active bg-dark text-white");
+            secilenRenk = $(this).data("renk");
+            bedenleriYukle(secilenRenk);
+        });
+
+        function bedenleriYukle(renk) {
+            $("#bedenAlani").empty();
+            var filtrelenmis = varyantlar.filter(v => v.Renk === renk);
+
+            filtrelenmis.forEach(function (v, idx) {
+                var cls = idx === 0 ? "btn-dark text-white" : "btn-outline-dark";
+                if (idx === 0) secilenBeden = v.Beden;
+
+                var btn = `<button type="button" class="btn ${cls} fw-bold beden-btn" data-beden="${v.Beden}" data-stok="${v.StokMiktari}">
+                            ${v.Beden} <span class="badge bg-success ms-1">${v.StokMiktari} ad</span>
+                           </button>`;
+                $("#bedenAlani").append(btn);
+            });
+        }
+
+        $(document).on("click", ".beden-btn", function () {
+            $(".beden-btn").removeClass("btn-dark text-white").addClass("btn-outline-dark");
+            $(this).removeClass("btn-outline-dark").addClass("btn-dark text-white");
+            secilenBeden = $(this).data("beden");
+        });
+
+        $("#btnAzalt").click(function () {
+            var v = parseInt($("#adetInput").val());
+            if (v > 1) $("#adetInput").val(v - 1);
+        });
+
+        $("#btnArttir").click(function () {
+            var v = parseInt($("#adetInput").val());
+            $("#adetInput").val(v + 1);
+        });
+
+          $("#btnSepetEkleAction").click(function () {
+        let sepet = JSON.parse(localStorage.getItem('sepetListesi')) || [];
+
+        let urunItem = {
+            UrunId: "@Model.Id",
+            UrunAdi: "@Model.Ad",
+            MagazaAdi: "@(Model.Magaza != null ? Model.Magaza.MagazaAdi : "Mağaza")",
+            GorselUrl: "@(string.IsNullOrEmpty(Model.GorselUrl) ? "/uploads/default.jpg" : Model.GorselUrl)",
+            Renk: secilenRenk || "Siyah",
+            Beden: secilenBeden || "Standart",
+            Adet: parseInt($("#adetInput").val()) || 1,
+            Fiyat: parseFloat("@Model.SatisFiyati".replace(',', '.')) || 0
+        };
+
+        sepet.push(urunItem);
+        localStorage.setItem('sepetListesi', JSON.stringify(sepet));
+
+        if (typeof guncelleSayaclari === "function") guncelleSayaclari();
+        alert("Ürün başarıyla sepete eklendi!");
+    });
+    });
+</script>

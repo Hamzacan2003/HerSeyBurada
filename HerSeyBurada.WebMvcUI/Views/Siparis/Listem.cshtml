@@ -1,0 +1,66 @@
+﻿@model IEnumerable<HerSeyBurada.Core.Entities.Siparis>
+@{
+    ViewData["Title"] = "Sipariş Geçmişim - HerSeyBurada";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container my-4">
+    <h3 class="fw-bold mb-4"><i class="bi bi-bag-check text-primary me-2"></i> Sipariş Geçmişim</h3>
+
+    @if (Model != null && Model.Any())
+    {
+        foreach (var siparis in Model)
+        {
+            <div class="card border-0 shadow-sm p-4 mb-4 rounded-4 bg-white">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
+                    <div>
+                        <span class="fw-bold text-muted small">SİPARİŞ NUMARASI</span>
+                        <h6 class="fw-bold text-dark mb-0">@siparis.SiparisNumarasi</h6>
+                    </div>
+                    <div>
+                        <span class="fw-bold text-muted small">SİPARİŞ TARİHİ</span>
+                        <h6 class="fw-bold text-dark mb-0">@siparis.OlusturulmaTarihi.ToString("dd.MM.yyyy HH:mm")</h6>
+                    </div>
+                    <div>
+                        <span class="badge bg-success fs-6">@siparis.SiparisDurumu</span>
+                    </div>
+                    <div>
+                        <span class="fw-bold text-muted small">TOPLAM TUTAR</span>
+                        <h5 class="fw-bold text-danger mb-0">@siparis.ToplamTutar.ToString("N2") TL</h5>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    @if (siparis.SiparisDetaylari != null)
+                    {
+                        foreach (var detay in siparis.SiparisDetaylari)
+                        {
+                            var urun = detay.UrunVaryant?.Urun;
+                            var gorsel = urun != null && !string.IsNullOrEmpty(urun.GorselUrl) ? urun.GorselUrl : "/uploads/default.jpg";
+                            var magazaAdi = urun?.Magaza != null ? urun.Magaza.MagazaAdi : "Mağaza";
+
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center gap-3 p-2 border rounded-3 bg-light">
+                                    <img src="@gorsel" style="width:65px; height:65px; object-fit:cover;" class="rounded-3" />
+                                    <div>
+                                        <h6 class="fw-bold mb-1">@(urun?.Ad ?? "Ürün")</h6>
+                                        <div class="small text-muted">Satıcı: <strong>@magazaAdi</strong> | Beden: <strong>@(detay.UrunVaryant?.Beden ?? "STD")</strong></div>
+                                        <div class="fw-bold text-danger small">@detay.Adet Adet x @detay.BirimFiyat.ToString("N2") TL</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="text-center py-5 card border-0 shadow-sm rounded-4">
+            <i class="bi bi-bag-x display-1 text-muted mb-3"></i>
+            <h5 class="fw-bold text-muted">Henüz hiç sipariş vermediniz.</h5>
+            <a href="/urun/liste" class="btn btn-primary fw-bold mt-2">Alışverişe Başla</a>
+        </div>
+    }
+</div>

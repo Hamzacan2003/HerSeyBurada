@@ -1,0 +1,25 @@
+﻿<div class="modal fade" id="carkModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-center p-4" style="border-radius: 20px; background: linear-gradient(135deg, #ff6000 0%, #ff8e00 100%); color: white;">
+            <h3 class="fw-bold">Günün Şans Çarkı! 🎁</h3>
+            <p>Çarkı çevir, sepetinde geçerli anında indirim kuponu kazan!</p>
+
+            <div class="my-4 position-relative d-flex justify-content-center">
+                <canvas id="wheelCanvas" width="300" height="300" style="border-radius: 50%; border: 5px solid white;"></canvas>
+            </div>
+
+            <button id="btnCevir" class="btn btn-dark btn-lg fw-bold rounded-pill shadow">Şansını Denemek İçin Çevir!</button>
+            <div id="carkSonuc" class="mt-3 fw-bold fs-5 text-warning"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById("btnCevir").addEventListener("click", function () {
+        this.disabled = true;
+        // Çark Dönme Animasyon Logiği
+        setTimeout(() => {
+            document.getElementById("carkSonuc").innerText = "Tebrikler! 150 TL Hoş Geldin Kuponu Kazandınız: HOSGELDIN150";
+        }, 2000);
+    });
+</script>

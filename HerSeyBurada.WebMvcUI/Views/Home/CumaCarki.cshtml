@@ -1,0 +1,50 @@
+﻿@{
+    ViewData["Title"] = "Cuma Fırsat Çarkı";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container my-5 text-center" style="max-width: 600px;">
+    <div class="card border-0 shadow-lg rounded-4 p-4 bg-white">
+        <h2 class="fw-bold text-warning mb-2"><i class="bi bi-disc text-danger me-2"></i> Cuma Şans Çarkı</h2>
+        <p class="text-muted">Her Cuma çarkı çevir, 2.000 TL ve üzeri alışverişlerinde geçerli anında 100 TL veya 250 TL indirim kuponu kazan!</p>
+
+        <div class="my-4 position-relative d-flex justify-content-center">
+            <div id="cark" class="rounded-circle border border-5 border-warning d-flex align-items-center justify-content-center shadow" 
+                 style="width: 260px; height: 260px; background: conic-gradient(#ffc107 0deg 90deg, #dc3545 90deg 180deg, #0d6efd 180deg 270deg, #198754 270deg 360deg); transition: transform 4s cubic-bezier(0.15, 0.9, 0.15, 1);">
+                <span class="fw-bold text-white fs-4">CUMA ÇARKI</span>
+            </div>
+        </div>
+
+        <button id="btnCarkCevir" class="btn btn-danger btn-lg fw-bold rounded-pill px-5 py-3 shadow">
+            ÇARKI ÇEVİR VE KUPON KAZAN
+        </button>
+
+        <div id="kuponSonuc" class="alert alert-success fw-bold mt-4 d-none"></div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        let cevirdiMi = false;
+
+        $("#btnCarkCevir").click(function () {
+            if (cevirdiMi) {
+                alert("Bu hafta çarkı zaten çevirdiniz! Gelecek Cuma tekrar deneyebilirsiniz.");
+                return;
+            }
+
+            let derece = 1440 + Math.floor(Math.random() * 360);
+            $("#cark").css("transform", `rotate(${derece}deg)`);
+
+            setTimeout(function () {
+                cevirdiMi = true;
+                let kod = (Math.random() > 0.5) ? "CUMA100" : "CUMA250";
+                let tutar = kod === "CUMA100" ? "100 TL (Min 2000 TL)" : "250 TL (Min 5000 TL)";
+                
+                $("#kuponSonuc")
+                    .removeClass("d-none")
+                    .html(`Tebrikler! <strong>${tutar}</strong> İndirim Kuponu Kazandınız!<br>Kupon Kodunuz: <span class="badge bg-dark fs-6 ms-1">${kod}</span>`);
+            }, 4000);
+        });
+    });
+</script>

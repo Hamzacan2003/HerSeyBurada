@@ -1,0 +1,211 @@
+﻿@{
+    ViewData["Title"] = "Sepetim";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container my-4">
+    <div class="row g-4">
+        <!-- Sol Taraf: Sepetteki Ürün Listesi -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                <h4 class="fw-bold text-dark mb-4">
+                    <i class="bi bi-cart3 text-success me-2"></i> Sepetimdeki Ürünler
+                </h4>
+
+                <div id="sepetUrunlerContainer">
+                    <!-- JavaScript ile dinamik dolacak -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Sağ Taraf: Teslimat Adresi & Ödeme Formu -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white sticky-top" style="top: 90px;">
+                <h5 class="fw-bold text-primary mb-3">
+                    <i class="bi bi-geo-alt me-1"></i> Teslimat Adresi
+                </h5>
+                <form id="siparisForm">
+                    <div class="mb-2">
+                        <input type="text" id="adresBasligi" class="form-control form-control-sm" value="Ev Adresi" placeholder="Adres Başlığı" required />
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <input type="text" id="sehir" class="form-control form-control-sm" value="Ankara" placeholder="Şehir" required />
+                        </div>
+                        <div class="col-6">
+                            <input type="text" id="ilce" class="form-control form-control-sm" value="Çankaya" placeholder="İlçe" required />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <textarea id="acikAdres" class="form-control form-control-sm" rows="2" placeholder="Açık Adres" required>Atatürk Bulvarı No:123/4</textarea>
+                    </div>
+
+                    <hr class="my-3" />
+
+                    <h5 class="fw-bold text-success mb-3">
+                        <i class="bi bi-credit-card me-1"></i> Kredi / Banka Kartı
+                    </h5>
+                    <div class="mb-2">
+                        <input type="text" id="kartSahibi" class="form-control form-control-sm" value="Hamza Can Altıntop" placeholder="Kart Üzerindeki İsim" required />
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" id="kartNumarasi" class="form-control form-control-sm" value="4543 1234 5678 9012" placeholder="Kart Numarası" required />
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <input type="text" id="sonKullanma" class="form-control form-control-sm" value="12/28" placeholder="AA/YY" required />
+                        </div>
+                        <div class="col-6">
+                            <input type="text" id="cvv" class="form-control form-control-sm" value="123" placeholder="CVV" required />
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center my-3 pt-2 border-top">
+                        <span class="fw-bold fs-5 text-dark">Toplam Tutar:</span>
+                        <span class="fw-bold fs-4 text-danger" id="sepetToplamTutar">0,00 TL</span>
+                    </div>
+
+                    <button type="button" id="btnOdemeyiYap" class="btn btn-success fw-bold w-100 py-3 rounded-3 shadow-sm">
+                        ÖDEMEYİ YAP VE SİPARİŞ VER
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        sepetiCiz();
+
+        // Ürün Silme
+        $(document).on("click", ".btn-sepetten-sil", function () {
+            let index = $(this).data("index");
+            let sepet = JSON.parse(localStorage.getItem('sepetListesi')) || [];
+            sepet.splice(index, 1);
+            localStorage.setItem('sepetListesi', JSON.stringify(sepet));
+            sepetiCiz();
+            if (typeof guncelleSayaclari === "function") guncelleSayaclari();
+        });
+
+        // Sipariş Tamamlama / Ödeme İşlemi
+        $("#btnOdemeyiYap").click(function () {
+            let sepet = JSON.parse(localStorage.getItem('sepetListesi')) || [];
+            if (sepet.length === 0) {
+                alert("Sepetiniz boş! Lütfen sepete ürün ekleyiniz.");
+                return;
+            }
+
+            // Backend DTO formatı ile birebir uyumlu payload hazırlığı
+            let payload = {
+                AdresBasligi: $("#adresBasligi").val(),
+                Sehir: $("#sehir").val(),
+                Ilce: $("#ilce").val(),
+                AcikAdres: $("#acikAdres").val(),
+                KartSahibi: $("#kartSahibi").val(),
+                KartNumarasi: $("#kartNumarasi").val(),
+                SonKullanma: $("#sonKullanma").val(),
+                Cvv: $("#cvv").val(),
+                Urunler: sepet.map(item => ({
+                    UrunId: item.UrunId || item.urunId || item.id,
+                    Renk: item.Renk || item.renk || "Siyah",
+                    Beden: item.Beden || item.beden || "Standart",
+                    Adet: parseInt(item.Adet || item.adet || 1),
+                    Fiyat: parseFloat(item.Fiyat || item.fiyat || item.SatisFiyati || item.satisFiyati || 0)
+                }))
+            };
+
+            $.ajax({
+                url: "/siparis/satin-al",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(payload),
+                success: function (response) {
+                    if (response.success) {
+                        alert(response.message);
+                        localStorage.removeItem('sepetListesi');
+                        if (typeof guncelleSayaclari === "function") guncelleSayaclari();
+                        window.location.href = "/siparis/listem";
+                    } else {
+                        alert("Hata: " + response.message);
+                    }
+                },
+                error: function () {
+                    alert("Sipariş işlenirken sunucu hatası oluştu. Lütfen tekrar deneyiniz.");
+                }
+            });
+        });
+    });
+
+    function sepetiCiz() {
+        let sepet = JSON.parse(localStorage.getItem('sepetListesi')) || [];
+        let $container =$("#sepetUrunlerContainer");
+        $container.empty();
+
+        if (sepet.length === 0) {
+            $container.html(`
+                <div class="text-center py-5">
+                    <i class="bi bi-cart-x display-1 text-muted"></i>
+                    <h5 class="fw-bold text-secondary mt-3">Sepetinizde ürün bulunmamaktadır.</h5>
+                    <a href="/urun/liste" class="btn btn-warning text-white fw-bold mt-2">Alışverişe Başla</a>
+                </div>
+            `);
+            $("#sepetToplamTutar").text("0,00 TL");
+            return;
+        }
+
+        let genelToplam = 0;
+
+        sepet.forEach(function (item, index) {
+            // Farklı isimlendirmeleri esnek bir şekilde yakalıyoruz
+            let urunAdi = item.UrunAdi || item.urunAdi || item.Ad || item.ad || "Ürün";
+            let magazaAdi = item.MagazaAdi || item.magazaAdi || item.SaticiFirmaAdi || "Mağaza";
+            let gorselUrl = item.GorselUrl || item.gorselUrl || item.ResimUrl || item.resimUrl || "/uploads/default.jpg";
+            
+            // İlk görseli alma (virgüllü ise)
+            if (gorselUrl.includes(',')) gorselUrl = gorselUrl.split(',')[0];
+
+            let birimFiyat = parseFloat(item.Fiyat || item.fiyat || item.SatisFiyati || item.satisFiyati || 0);
+            if (isNaN(birimFiyat)) birimFiyat = 0;
+
+            let adet = parseInt(item.Adet || item.adet || 1);
+            if (isNaN(adet)) adet = 1;
+
+            let renk = item.Renk || item.renk || "";
+            let beden = item.Beden || item.beden || "";
+
+            let satirToplam = birimFiyat * adet;
+            genelToplam += satirToplam;
+
+            let html = `
+                <div class="card p-3 mb-3 border-0 bg-light rounded-3 shadow-sm">
+                    <div class="row align-items-center g-3">
+                        <div class="col-md-2 col-3">
+                            <img src="${gorselUrl}" class="img-fluid rounded-3" style="height: 80px; width: 80px; object-fit: cover;" />
+                        </div>
+                        <div class="col-md-6 col-9">
+                            <h6 class="fw-bold text-dark mb-1">${urunAdi}</h6>
+                            <span class="badge bg-secondary mb-2">Mağaza: ${magazaAdi}</span>
+                            <div class="small text-muted">
+                                ${renk ? `<span class="me-2"><strong>Renk:</strong> ${renk}</span>` : ''}
+                                ${beden ? `<span><strong>Beden:</strong> ${beden}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-8 text-md-end">
+                            <div class="fw-bold text-danger fs-5">${satirToplam.toFixed(2).replace('.', ',')} TL</div>
+                            <small class="text-muted">${adet} x ${birimFiyat.toFixed(2).replace('.', ',')} TL</small>
+                        </div>
+                        <div class="col-md-1 col-4 text-end">
+                            <button class="btn btn-outline-danger btn-sm btn-sepetten-sil" data-index="${index}">
+                                <i class="bi bi-trash"></i> Sil
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            $container.append(html);
+        });
+
+        $("#sepetToplamTutar").text(genelToplam.toFixed(2).replace('.', ',') + " TL");
+    }
+</script>

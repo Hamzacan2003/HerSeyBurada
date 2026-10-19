@@ -1,0 +1,78 @@
+﻿@model IEnumerable<HerSeyBurada.Core.Entities.Magaza>
+@{
+    ViewData["Title"] = "Satıcı / Mağaza Başvuruları - HerSeyBurada";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container my-4">
+    <div class="d-flex align-items-center mb-4">
+        <i class="bi bi-shield-check text-danger display-6 me-2"></i>
+        <h3 class="fw-bold text-dark mb-0">Satıcı / Mağaza Yönetimi</h3>
+    </div>
+
+    @if (TempData["Mesaj"] != null)
+    {
+        <div class="alert alert-success fw-bold rounded-3 shadow-sm mb-3">
+            <i class="bi bi-check-circle me-1"></i> @TempData["Mesaj"]
+        </div>
+    }
+
+    <div class="bg-white p-4 rounded-4 shadow-sm">
+        @if (Model != null && Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Mağaza Adı</th>
+                            <th>Yetkili E-Posta</th>
+                            <th>Vergi No</th>
+                            <th>Durum</th>
+                            <th class="text-end">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var m in Model)
+                        {
+                            <tr>
+                                <td class="fw-bold">@m.MagazaAdi</td>
+                                <td>@(m.Kullanici?.Eposta ?? "Belirtilmemiş")</td>
+                                <td>@m.VergiNo</td>
+                                <td>
+                                    @if (m.OnaylandiMi)
+                                    {
+                                        <span class="badge bg-success px-3 py-2 fw-bold">Onaylı</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark px-3 py-2 fw-bold">Onay Bekliyor</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        @if (!m.OnaylandiMi)
+                                        {
+                                            <form action="/admin/magaza-onayla" method="post">
+                                                <input type="hidden" name="id" value="@m.Id" />
+                                                <button type="submit" class="btn btn-success btn-sm fw-bold px-3">
+                                                    <i class="bi bi-check-lg me-1"></i> Onayla
+                                                </button>
+                                            </form>
+                                        }
+                                        <!-- SATICI SİLME BUTONU -->
+                                        <form action="/admin/magaza-sil" method="post" onsubmit="return confirm('Bu satıcıyı ve eklediği TÜM ürünleri silmek istediğinize emin misiniz?');">
+                                            <input type="hidden" name="id" value="@m.Id" />
+                                            <button type="submit" class="btn btn-danger btn-sm fw-bold px-3">
+                                                <i class="bi bi-trash me-1"></i> Satıcıyı Sil
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

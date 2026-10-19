@@ -1,0 +1,110 @@
+﻿@model IEnumerable<HerSeyBurada.Core.Entities.Urun>
+@{
+    ViewData["Title"] = "Tüm Ürünler - HerSeyBurada";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    bool girisYapildiMi = User.Identity != null && User.Identity.IsAuthenticated;
+}
+
+<div class="container my-4">
+    <div class="row g-4">
+        @if (Model != null && Model.Any())
+        {
+            foreach (var item in Model)
+            {
+                var gorseller = (item.GorselUrl ?? "").Split(',').Where(x => !string.IsNullOrEmpty(x)).ToList();
+                var vitrin = gorseller.FirstOrDefault() ?? "/uploads/default.jpg";
+                var magazaAdi = item.Magaza != null ? item.Magaza.MagazaAdi : "HerSeyBurada Mağaza";
+
+                <div class="col-md-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden product-card">
+                        <div class="position-relative">
+                            <span class="badge bg-warning text-dark position-absolute top-0 start-0 m-2 fw-bold">Satıcı: @magazaAdi</span>
+                            
+                            <!-- KANLI VE ÇALIŞAN KALP BUTONU -->
+                            <button type="button" class="btn btn-light btn-sm rounded-circle position-absolute top-0 end-0 m-2 shadow-sm fav-kalp-btn"
+                                    onclick="favoriTikleListe(event, '@item.Id', '@item.Ad', '@item.SatisFiyati', '@vitrin', '@magazaAdi', @girisYapildiMi.ToString().ToLower())">
+                                <i class="bi bi-heart text-danger fs-5 id-kalp-@item.Id"></i>
+                            </button>
+
+                            <a href="/urun/detay/@item.Id">
+                                <img src="@vitrin" class="card-img-top" style="height:230px; object-fit:cover;" alt="@item.Ad" />
+                            </a>
+                        </div>
+                        <div class="card-body d-flex flex-column justify-content-between p-3">
+                            <div>
+                                <span class="badge bg-light text-primary mb-1 border">@item.KategoriAdi</span>
+                                <h6 class="fw-bold text-dark mb-2">@item.Ad</h6>
+                                <div class="mb-2">
+                                    @if (item.Varyantlar != null && item.Varyantlar.Any())
+                                    {
+                                        foreach (var v in item.Varyantlar.Take(3))
+                                        {
+                                            <span class="badge bg-light text-secondary border me-1">@v.Beden: @v.StokMiktari ad</span>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold text-danger mb-2">@item.SatisFiyati.ToString("N2") TL</h5>
+                                <!-- GİRİŞ YAPILMADIYSA UYARAN SEPETE EKLE BUTONU -->
+                                <button type="button" class="btn bg-trendyol w-100 fw-bold" onclick="sepeteEkleListe('@item.Id', '@item.Ad', '@item.SatisFiyati', '@vitrin', '@magazaAdi', @girisYapildiMi.ToString().ToLower())">
+                                    SEPETE EKLE
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        favoriDurumlariniGuncelle();
+    });
+
+    function favoriDurumlariniGuncelle() {
+        let favoriler = JSON.parse(localStorage.getItem('favoriListesi')) || [];
+        favoriler.forEach(function(f) {
+            $('.id-kalp-' + f.id).removeClass('bi-heart').addClass('bi-heart-fill');
+        });
+    }
+
+    function favoriTikleListe(e, id, ad, fiyat, resim, marka, girisYapildi) {
+        e.stopPropagation();
+        if (!girisYapildi) {
+            alert('Favorilerinize ürün ekleyebilmek için lütfen önce giriş yapınız!');
+            window.location.href = '/Security/Girisyap';
+            return;
+        }
+
+        let favoriler = JSON.parse(localStorage.getItem('favoriListesi')) || [];
+        let index = favoriler.findIndex(x => x.id === id);
+
+        if (index === -1) {
+            favoriler.push({ id: id, ad: ad, fiyat: fiyat, resim: resim, marka: marka });
+            localStorage.setItem('favoriListesi', JSON.stringify(favoriler));
+            $('.id-kalp-' + id).removeClass('bi-heart').addClass('bi-heart-fill');
+            alert(ad + " favorilerinize eklendi!");
+        } else {
+            favoriler.splice(index, 1);
+            localStorage.setItem('favoriListesi', JSON.stringify(favoriler));
+            $('.id-kalp-' + id).removeClass('bi-heart-fill').addClass('bi-heart');
+            alert(ad + " favorilerinizden çıkarıldı.");
+        }
+    }
+
+    function sepeteEkleListe(id, ad, fiyat, resim, marka, girisYapildi) {
+        if (!girisYapildi) {
+            alert('Sepetinize ürün ekleyebilmek için lütfen önce giriş yapınız!');
+            window.location.href = '/Security/Girisyap';
+            return;
+        }
+
+        let sepet = JSON.parse(localStorage.getItem('sepetListesi')) || [];
+        sepet.push({ id: id, ad: ad, fiyat: parseFloat(fiyat), resim: resim, marka: marka, beden: 'STD', renk: 'Siyah', adet: 1 });
+        localStorage.setItem('sepetListesi', JSON.stringify(sepet));
+        alert(ad + ' sepetinize eklendi!');
+    }
+</script>

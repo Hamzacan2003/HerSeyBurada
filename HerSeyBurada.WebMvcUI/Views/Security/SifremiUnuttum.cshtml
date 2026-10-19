@@ -1,0 +1,42 @@
+﻿@{
+    ViewData["Title"] = "Şifremi Unuttum";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container my-5" style="max-width: 500px;">
+    <div class="card border-0 shadow-lg rounded-4 p-4 bg-white">
+        <h3 class="fw-bold text-center text-primary mb-3">Şifre Sıfırlama</h3>
+        
+        @if (TempData["Hata"] != null)
+        {
+            <div class="alert alert-danger fw-bold">@TempData["Hata"]</div>
+        }
+        @if (TempData["Mesaj"] != null)
+        {
+            <div class="alert alert-success fw-bold">@TempData["Mesaj"]</div>
+        }
+
+        <form action="/security/sifremiunuttum" method="post">
+            <div class="mb-3">
+                <label class="form-label fw-bold">E-Posta Adresiniz</label>
+                <input type="email" name="Eposta" class="form-control py-2" placeholder="ornek@email.com" required />
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Mevcut / Eski Şifreniz</label>
+                <input type="password" name="EskiSifre" class="form-control py-2" placeholder="******" required />
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Yeni Şifreniz</label>
+                <input type="password" name="YeniSifre" class="form-control py-2" placeholder="******" required />
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Yeni Şifreniz (Tekrar)</label>
+                <input type="password" name="YeniSifreTekrar" class="form-control py-2" placeholder="******" required />
+            </div>
+
+            <button type="submit" class="btn btn-primary fw-bold w-100 py-3 rounded-3">
+                ŞİFREYİ GÜNCELLE
+            </button>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,35 @@
+﻿@{
+    ViewData["Title"] = "E-Posta Doğrulama";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container my-5" style="max-width: 450px;">
+    <div class="card border-0 shadow-lg rounded-4 p-4 text-center bg-white">
+        <i class="bi bi-envelope-check display-3 text-warning mb-3"></i>
+        <h4 class="fw-bold">E-Posta Doğrulama Kodu</h4>
+        <p class="text-muted small">E-posta adresinize gönderilen 6 haneli onay kodunu giriniz.</p>
+
+        @if (TempData["Mesaj"] != null)
+        {
+            <div class="alert alert-info fw-bold small">
+                @TempData["Mesaj"]
+            </div>
+        }
+
+        @if (TempData["Hata"] != null)
+        {
+            <div class="alert alert-danger fw-bold small">
+                @TempData["Hata"]
+            </div>
+        }
+
+        <form action="/security/epostadogrula" method="post" class="mt-3">
+            <div class="mb-3">
+                <input type="text" name="Kod" class="form-control form-control-lg text-center fw-bold fs-2 text-primary" style="letter-spacing: 8px;" maxlength="6" placeholder="000000" required autofocus />
+            </div>
+            <button type="submit" class="btn btn-warning text-white fw-bold w-100 py-3 rounded-3 shadow-sm">
+                KODU DOĞRULA VE KAYDOL
+            </button>
+        </form>
+    </div>
+</div>

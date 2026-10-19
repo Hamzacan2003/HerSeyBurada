@@ -1,0 +1,23 @@
+﻿@{
+    ViewData["Title"] = "Satıcı / Mağaza Girişi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row justify-content-center my-5">
+    <div class="col-md-5">
+        <div class="card shadow-sm border-0 rounded-4 p-4">
+            <h3 class="fw-bold text-center mb-4"><i class="bi bi-shop text-primary"></i> Satıcı Mağaza Girişi</h3>
+            <form action="/satici/giris" method="post">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Vergi No / TKN</label>
+                    <input type="text" name="VergiNo" class="form-control" placeholder="1234567890" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Şifre</label>
+                    <input type="password" name="Sifre" class="form-control" required />
+                </div>
+                <button type="submit" class="btn btn-primary w-100 fw-bold btn-lg">MAĞAZA PANELİNE GİRİŞ YAP</button>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,83 @@
+﻿@model IEnumerable<HerSeyBurada.Core.Entities.Urun>
+@{
+    ViewData["Title"] = "Mağaza Ürünlerim - HerSeyBurada";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container my-4">
+    @if (TempData["Mesaj"] != null)
+    {
+        <div class="alert alert-success fw-bold rounded-3 mb-3"><i class="bi bi-check-circle me-1"></i> @TempData["Mesaj"]</div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-dark mb-0"><i class="bi bi-box-seam text-primary me-2"></i> Mağaza Ürünlerim</h3>
+        <a href="/satici/urun-ekle" class="btn btn-success fw-bold px-3 py-2 rounded-3">
+            <i class="bi bi-plus-circle me-1"></i> Yeni Ürün Ekle
+        </a>
+    </div>
+
+    <div class="bg-white p-4 rounded-4 shadow-sm">
+        @if (Model != null && Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Görsel</th>
+                            <th>Ürün Adı</th>
+                            <th>Kategori</th>
+                            <th>Fiyat</th>
+                            <th>Stok Durumu</th>
+                            <th class="text-center">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            var gorselListesi = (item.GorselUrl ?? "").Split(',').Where(x => !string.IsNullOrEmpty(x)).ToList();
+                            var vitrinGorsel = gorselListesi.FirstOrDefault() ?? "/uploads/default.jpg";
+
+                            <tr>
+                                <td>
+                                    <img src="@vitrinGorsel" class="rounded-3 shadow-sm border" style="width:65px; height:65px; object-fit:cover;" alt="@item.Ad" />
+                                </td>
+                                <td class="fw-bold">@item.Ad</td>
+                                <td><span class="badge bg-light text-dark border">@item.KategoriAdi</span></td>
+                                <td class="fw-bold text-danger">@item.SatisFiyati.ToString("N2") TL</td>
+                                <td>
+                                    @if (item.Varyantlar != null && item.Varyantlar.Any())
+                                    {
+                                        foreach (var v in item.Varyantlar)
+                                        {
+                                            <span class="badge bg-info text-dark me-1 mb-1">@v.Renk - @v.Beden: @v.StokMiktari ad</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Stok Yok</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <!-- DÜZENLE BUTONU -->
+                                        <a href="/satici/urun-duzenle/@item.Id" class="btn btn-outline-warning btn-sm fw-bold">
+                                            <i class="bi bi-pencil me-1"></i> Düzenle
+                                        </a>
+
+                                        <!-- SİL BUTONU -->
+                                        <form action="/satici/urun-sil/@item.Id" method="post" onsubmit="return confirm('Bu ürünü ve tüm stoklarını silmek istediğinize emin misiniz?');">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm fw-bold">
+                                                <i class="bi bi-trash me-1"></i> Sil
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

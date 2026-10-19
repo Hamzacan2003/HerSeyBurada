@@ -1,0 +1,123 @@
+@{
+    ViewData["Title"] = "Yeni Ürün Ekle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container my-4" style="max-width: 850px;">
+    <div class="card border-0 shadow-lg rounded-4 p-4 bg-white">
+        <h3 class="fw-bold text-primary mb-4"><i class="bi bi-plus-circle me-2"></i> Yeni Ürün Ekle</h3>
+
+        <form action="/satici/urun-ekle" method="post" enctype="multipart/form-data">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label fw-bold">Ürün Adı</label>
+                    <input type="text" name="UrunAdi" class="form-control py-2" placeholder="Örn: Nike Sneaker / Oversize T-Shirt" required />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Kategori</label>
+                    <select name="Kategori" id="kategoriSelect" class="form-select py-2">
+                        <option value="Giyim">Giyim (XS - XXL)</option>
+                        <option value="Ayakkabı">Ayakkabı (36 - 45)</option>
+                        <option value="Elektronik">Elektronik (Standart)</option>
+                        <option value="Ev & Yaşam">Ev & Yaşam (Standart)</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Satış Fiyatı (TL)</label>
+                    <input type="number" step="0.01" name="Fiyat" class="form-control py-2" placeholder="0.00" required />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Ürün Görselleri (Çoklu)</label>
+                    <input type="file" name="Resimler" class="form-control py-2" multiple accept="image/*" />
+                </div>
+
+                <!-- RENK SEÇİM ALANI -->
+                <div class="col-12 my-3">
+                    <label class="form-label fw-bold text-dark">Renk Seçenekleri:</label>
+                    <div class="d-flex gap-3 flex-wrap mb-3" id="renkSecimleri">
+                        @foreach (var r in new[] { "Siyah", "Beyaz", "Mavi", "Kırmızı", "Yeşil", "Gri" })
+                        {
+                            <div class="form-check form-check-inline bg-light p-2 rounded-3 border">
+                                <input class="form-check-input renk-checkbox ms-1" type="checkbox" name="SeciliRenkler" value="@r" id="renk_@r" @(r == "Siyah" ? "checked" : "")>
+                                <label class="form-check-label fw-bold me-2" for="renk_@r">@r</label>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- KATEGORİye VE RENKLERE GÖRE DİNAMİK BEDEN/NUMARA STOK KUTULARI -->
+                    <div class="card p-3 bg-light border-0 rounded-3" id="renkStokKutulari">
+                        <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-box-seam me-1"></i> Beden / Numara Bazlı Stok Miktarları:</h6>
+                        <div id="stokInputsContainer" class="row g-3"></div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-bold">Ürün Açıklaması</label>
+                    <textarea name="Aciklama" class="form-control" rows="3" placeholder="Ürün özelliklerini yazınız..."></textarea>
+                </div>
+
+                <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-success fw-bold btn-lg w-100 rounded-3 py-3">
+                        <i class="bi bi-check-circle me-1"></i> ÜRÜNÜ VE TÜM VARYANT STOKLARINI KAYDET
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        stokKutulariniGuncelle();
+
+        $(".renk-checkbox, #kategoriSelect").change(function () {
+            stokKutulariniGuncelle();
+        });
+
+        function stokKutulariniGuncelle() {
+            var $container =$("#stokInputsContainer");
+            $container.empty();
+
+            var kategori = $("#kategoriSelect").val();
+            var bedenler = [];
+
+            if (kategori === "Giyim") {
+                bedenler = ["XS", "S", "M", "L", "XL", "XXL"];
+            } else if (kategori === "Ayakkabı") {
+                bedenler = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
+            } else {
+                bedenler = ["Standart"];
+            }
+
+            $(".renk-checkbox:checked").each(function () {
+                var renk = $(this).val();
+
+                var renkBlock = `
+                    <div class="col-12 border-bottom pb-3">
+                        <span class="badge bg-dark fs-6 mb-2">${renk} Renk Serisi</span>
+                        <div class="row g-2">
+                `;
+
+                bedenler.forEach(function (beden) {
+                    renkBlock += `
+                        <div class="col-md-4 col-6">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text fw-bold bg-white" style="min-width: 75px;">${beden}:</span>
+                                <input type="number" name="Stoklar" class="form-control fw-bold" min="0" value="10" required />
+                            </div>
+                        </div>
+                    `;
+                });
+
+                renkBlock += `
+                        </div>
+                    </div>
+                `;
+
+                $container.append(renkBlock);
+            });
+        }
+    });
+</script>
