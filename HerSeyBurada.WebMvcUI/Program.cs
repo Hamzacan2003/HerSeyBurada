@@ -6,26 +6,59 @@ using HerSeyBurada.DataAccess.Concrete;
 using HerSeyBurada.WebMvcUI.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. DbContext
+// 1. Connection String Okuma ve Npgsql Uyumluluğu
+string? rawConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+                             ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+string formattedConnectionString = rawConnectionString ?? "";
+
+// Eğer URI formatında (postgresql://) gelmişse Npgsql'in patlamaması için Key-Value formatına dönüştür
+if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+{
+    try
+    {
+        var uri = new Uri(rawConnectionString);
+        var userInfo = uri.UserInfo.Split(':');
+
+        var builderDb = new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Username = userInfo[0],
+            Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "",
+            Database = uri.AbsolutePath.TrimStart('/'),
+            SslMode = SslMode.Require,
+            TrustServerCertificate = true
+        };
+        formattedConnectionString = builderDb.ConnectionString;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[CONN STRING HATA]: Connection string dönüştürülürken hata oluştu: {ex.Message}");
+    }
+}
+
+// 2. DbContext Tanımı
 builder.Services.AddDbContext<HerSeyBuradaDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        formattedConnectionString,
         b => b.MigrationsAssembly("HerSeyBurada.DataAccess")
     ));
 
-// 2. Repositories & Services
+// 3. Repositories & Services
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IKullaniciService, KullaniciManager>();
 builder.Services.AddScoped<IKuponService, KuponManager>();
 
-// 3. Email & Session Kayıtları (EKLENDİ)
+// 4. Email & Session
 builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddSession(); // TempData ve Session takibi için gerekli
+builder.Services.AddSession();
 
-// 4. Cookie Authentication
+// 5. Cookie Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -40,10 +73,12 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
-// 5. Seed Data (Admin ve Satici)
+// 6. Seed Data (Veritabanı Oluşturma ve İlk Kullanıcılar)
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<HerSeyBuradaDbContext>();
+
+    // Veritabanını oluştur
     context.Database.EnsureCreated();
 
     if (!context.Kullanicilar.Any(k => k.Eposta == "hamzacana98@gmail.com"))
@@ -96,9 +131,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-
-app.UseSession(); // EKLENDİ (Routing'den sonra, Auth'dan önce)
-
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
