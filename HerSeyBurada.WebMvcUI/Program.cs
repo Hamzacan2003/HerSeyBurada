@@ -21,7 +21,11 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IKullaniciService, KullaniciManager>();
 builder.Services.AddScoped<IKuponService, KuponManager>();
 
-// 3. Cookie Authentication
+// 3. Email & Session Kayıtları (EKLENDİ)
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddSession(); // TempData ve Session takibi için gerekli
+
+// 4. Cookie Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -33,10 +37,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 builder.Services.AddControllersWithViews();
-builder.Services.AddScoped<IEmailService, EmailService>();
+
 var app = builder.Build();
 
-// 4. Seed Data (Admin ken Satici)
+// 5. Seed Data (Admin ve Satici)
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<HerSeyBuradaDbContext>();
@@ -50,7 +54,7 @@ using (var scope = app.Services.CreateScope())
             Ad = "Hamza Can",
             Soyad = "Altıntop",
             Eposta = "hamzacana98@gmail.com",
-            SifreHash = "hamzcan.1", // SifreHash nausar
+            SifreHash = "hamzcan.1",
             Rol = "Admin"
         };
         context.Kullanicilar.Add(admin);
@@ -64,7 +68,7 @@ using (var scope = app.Services.CreateScope())
             Ad = "Firma 1",
             Soyad = "Mağaza",
             Eposta = "satici@herseyburada.com",
-            SifreHash = "123456", // SifreHash nausar
+            SifreHash = "123456",
             Rol = "Satici"
         };
         context.Kullanicilar.Add(saticiUser);
@@ -91,8 +95,9 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
+
+app.UseSession(); // EKLENDİ (Routing'den sonra, Auth'dan önce)
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -100,4 +105,5 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Urun}/{action=Liste}/{id?}");
+
 app.Run();
