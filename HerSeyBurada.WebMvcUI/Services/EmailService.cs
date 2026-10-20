@@ -25,51 +25,57 @@ namespace HerSeyBurada.WebMvcUI.Services
 
         public async Task EmailGonderAsync(string aliciEposta, string konu, string icerikHtml)
         {
-            try
+            // Arka planda donmesini ve HTTP istegini kilitlenmesini engellemek icin Task.Run ile sarmalıyoruz
+            _ = Task.Run(() =>
             {
-                // Değişkeni Render Environment veya Configuration üzerinden al
-                string gmailPassword = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD")
-                                     ?? _configuration["GMAIL_APP_PASSWORD"]
-                                     ?? Environment.GetEnvironmentVariable("BREVO_API_KEY");
-
-                if (string.IsNullOrEmpty(gmailPassword))
+                try
                 {
-                    _logger.LogError("[GMAIL HATA]: Gmail Uygulama Şifresi (GMAIL_APP_PASSWORD) bulunamadı!");
-                    return;
-                }
+                    string gmailPassword = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD")
+                                         ?? _configuration["GMAIL_APP_PASSWORD"]
+                                         ?? Environment.GetEnvironmentVariable("BREVO_API_KEY");
 
-                // Boşlukları temizle (Google 16 haneli şifreyi 4'erli gruplar halinde verir)
-                gmailPassword = gmailPassword.Replace(" ", "").Trim();
-
-                string senderEmail = "hamzacana98@gmail.com";
-
-                using (var smtpClient = new SmtpClient("smtp.gmail.com", 587))
-                {
-                    smtpClient.Credentials = new NetworkCredential(senderEmail, gmailPassword);
-                    smtpClient.EnableSsl = true;
-                    smtpClient.UseDefaultCredentials = false;
-
-                    using (var mailMessage = new MailMessage())
+                    if (string.IsNullOrEmpty(gmailPassword))
                     {
-                        mailMessage.From = new MailAddress(senderEmail, "HerŞeyBurada");
-                        mailMessage.To.Add(aliciEposta);
-                        mailMessage.Subject = konu;
-                        mailMessage.Body = icerikHtml;
-                        mailMessage.IsBodyHtml = true;
+                        _logger.LogError("[GMAIL HATA]: Gmail Uygulama Şifresi bulunamadı!");
+                        return;
+                    }
 
-                        await smtpClient.SendMailAsync(mailMessage);
-                        _logger.LogInformation($"[GMAIL SMTP BAŞARILI]: Mail {aliciEposta} adresine başarıyla gönderildi.");
+                    gmailPassword = gmailPassword.Replace(" ", "").Trim();
+                    string senderEmail = "hamzacana98@gmail.com";
+
+                    using (var smtpClient = new SmtpClient("smtp.gmail.com", 587))
+                    {
+                        smtpClient.Credentials = new NetworkCredential(senderEmail, gmailPassword);
+                        smtpClient.EnableSsl = true;
+                        smtpClient.UseDefaultCredentials = false;
+
+                        // 10 saniye icinde cevap vermezse zaman asimina ugrasın, sayfayi kilitletmesin
+                        smtpClient.Timeout = 10000;
+
+                        using (var mailMessage = new MailMessage())
+                        {
+                            mailMessage.From = new MailAddress(senderEmail, "HerŞeyBurada");
+                            mailMessage.To.Add(aliciEposta);
+                            mailMessage.Subject = konu;
+                            mailMessage.Body = icerikHtml;
+                            mailMessage.IsBodyHtml = true;
+
+                            smtpClient.Send(mailMessage);
+                            _logger.LogInformation($"[GMAIL SMTP BAŞARILI]: Mail {aliciEposta} adresine başarıyla gönderildi.");
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"[GMAIL SMTP EXCEPTION]: Mail gönderimi başarısız oldu: {ex.Message}");
-                if (ex.InnerException != null)
+                catch (Exception ex)
                 {
-                    _logger.LogError($"[İÇ HATA DETAYI]: {ex.InnerException.Message}");
+                    _logger.LogError($"[GMAIL SMTP HATA]: Mail gönderilemedi: {ex.Message}");
+                    if (ex.InnerException != null)
+                    {
+                        _logger.LogError($"[İÇ HATA DETAYI]: {ex.InnerException.Message}");
+                    }
                 }
-            }
+            });
+
+            await Task.CompletedTask;
         }
     }
 }
