@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Net;
-using System.Net.Mail;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,7 @@ namespace HerSeyBurada.WebMvcUI.Services
 
     public class EmailService : IEmailService
     {
+        private static readonly HttpClient _httpClient = new HttpClient();
         private readonly IConfiguration _configuration;
         private readonly ILogger<EmailService> _logger;
 
@@ -25,53 +27,48 @@ namespace HerSeyBurada.WebMvcUI.Services
 
         public async Task EmailGonderAsync(string aliciEposta, string konu, string icerikHtml)
         {
-            // Arka planda donmesini ve HTTP istegini kilitlenmesini engellemek icin Task.Run ile sarmalıyoruz
-            _ = Task.Run(() =>
+            _ = Task.Run(async () =>
             {
                 try
                 {
-                    string gmailPassword = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD")
-                                         ?? _configuration["GMAIL_APP_PASSWORD"]
-                                         ?? Environment.GetEnvironmentVariable("BREVO_API_KEY");
+                    string apiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY")
+                                   ?? _configuration["RESEND_API_KEY"];
 
-                    if (string.IsNullOrEmpty(gmailPassword))
+                    if (string.IsNullOrEmpty(apiKey))
                     {
-                        _logger.LogError("[GMAIL HATA]: Gmail Uygulama Şifresi bulunamadı!");
+                        _logger.LogError("[RESEND HATA]: RESEND_API_KEY ortam değişkenlerinde bulunamadı!");
                         return;
                     }
 
-                    gmailPassword = gmailPassword.Replace(" ", "").Trim();
-                    string senderEmail = "hamzacana98@gmail.com";
-
-                    using (var smtpClient = new SmtpClient("smtp.gmail.com", 587))
+                    var requestPayload = new
                     {
-                        smtpClient.Credentials = new NetworkCredential(senderEmail, gmailPassword);
-                        smtpClient.EnableSsl = true;
-                        smtpClient.UseDefaultCredentials = false;
+                        from = "HerŞeyBurada <onboarding@resend.dev>",
+                        to = new[] { aliciEposta },
+                        subject = konu,
+                        html = icerikHtml
+                    };
 
-                        // 10 saniye icinde cevap vermezse zaman asimina ugrasın, sayfayi kilitletmesin
-                        smtpClient.Timeout = 10000;
+                    var jsonPayload = JsonSerializer.Serialize(requestPayload);
+                    var request = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails");
 
-                        using (var mailMessage = new MailMessage())
-                        {
-                            mailMessage.From = new MailAddress(senderEmail, "HerŞeyBurada");
-                            mailMessage.To.Add(aliciEposta);
-                            mailMessage.Subject = konu;
-                            mailMessage.Body = icerikHtml;
-                            mailMessage.IsBodyHtml = true;
+                    request.Headers.Add("Authorization", $"Bearer {apiKey.Trim()}");
+                    request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                            smtpClient.Send(mailMessage);
-                            _logger.LogInformation($"[GMAIL SMTP BAŞARILI]: Mail {aliciEposta} adresine başarıyla gönderildi.");
-                        }
+                    var response = await _httpClient.SendAsync(request);
+                    string responseContent = await response.Content.ReadAsStringAsync();
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        _logger.LogInformation($"[RESEND BAŞARILI]: Mail {aliciEposta} adresine başarıyla yollandı. Yanıt: {responseContent}");
+                    }
+                    else
+                    {
+                        _logger.LogError($"[RESEND HATA]: Status: {response.StatusCode}, Detay: {responseContent}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"[GMAIL SMTP HATA]: Mail gönderilemedi: {ex.Message}");
-                    if (ex.InnerException != null)
-                    {
-                        _logger.LogError($"[İÇ HATA DETAYI]: {ex.InnerException.Message}");
-                    }
+                    _logger.LogError($"[RESEND EXCEPTION]: Mail gönderim hatası: {ex.Message}");
                 }
             });
 
